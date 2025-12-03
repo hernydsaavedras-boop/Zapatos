@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>🍽️ Ecommerce Comida Internacional - Harvey Sanabria</title>
+
+  <style>
+    :root{
+      --morado:#7b2cbf;
+      --morado-osc:#5a189a;
+      --morado-claro:#e0b3ff;
+      --blanco:#ffffff;
+      --gris:#f2f2f2;
+      --negro:#222;
+      --borde:#d0b0ff;
+    }
+
+    body{
+      font-family: system-ui;
+      background: var(--gris);
+      color: var(--negro);
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1{
+      color: var(--morado);
+      margin-bottom: 20px;
+    }
+
+    /* Grid de productos */
+    #productos{
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 18px;
+      margin-top: 20px;
+    }
+
+    .producto{
+      background: var(--blanco);
+      border: 2px solid var(--borde);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      transition: transform .2s;
+    }
+
+    .producto:hover{
+      transform: scale(1.03);
+    }
+
+    .producto img{
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .producto button{
+      background: var(--morado);
+      border: none;
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .producto button:hover{
+      background: var(--morado-osc);
+    }
+
+    /* Carrito */
+    .carrito{
+      margin-top: 40px;
+      background: var(--blanco);
+      border: 2px solid var(--borde);
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: left;
+    }
+
+    #lista-carrito li{
+      list-style: none;
+      background: var(--morado-claro);
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .qty button{
+      background: var(--morado-osc);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+
+    .remove{
+      background: #d40000;
+      color: white;
+      border: none;
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #btn-vaciar{
+      background: #d40000;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    #btn-finalizar{
+      background: var(--morado);
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .totales p strong{
+      color: var(--morado-osc);
+    }
+
+    .pago{
+      margin-top: 20px;
+      padding: 10px;
+      background: var(--gris);
+      border-radius: 8px;
+    }
+
+    #categoria{
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid var(--morado);
+      margin-bottom: 20px;
+    }
+
+  </style>
+</head>
+<body>
+
+<h1>🍽️ Ecommerce Comida Internacional - Harvey Sanabria</h1>
+
+<label for="categoria"><strong>Filtrar por categoría:</strong></label>
+<select id="categoria">
+  <option value="todos">Todas</option>
+  <option value="Zapatos">Zapatos</option>
+  <option value="Tacones">Tacones</option>
+  <option value="Elegantes">Elegantes</option>
+</select>
+
+<div id="productos"></div>
+
+<div class="carrito">
+  <h2>🛒 Carrito (<span id="cantidad-carrito">0</span>)</h2>
+  <ul id="lista-carrito"></ul>
+
+  <div class="totales">
+    <p>Subtotal: <strong id="subtotal-text">$0.00</strong></p>
+    <p>Descuento: <strong id="descuento-text">$0.00</strong></p>
+    <p>Impuestos: <strong id="impuestos-text">$0.00</strong></p>
+    <p>Total: <strong id="total-text">$0.00</strong></p>
+  </div>
+
+  <button id="btn-vaciar">🧼 Vaciar</button>
+  <button id="btn-finalizar">✅ Finalizar</button>
+
+  <div class="pago">
+    <h3>💳 Pago con PayPal</h3>
+    <div id="paypal-button-container" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- SDK PayPal sandbox -->
+<script src="https://www.paypal.com/sdk/js?client-id=sb&currency=USD"></script>
+
+<script>
+/* ===============================
+   CONFIGURACIONES
+=============================== */
+const MONEDA = 'USD';
+const LOCALE = 'es-US';
+const TAX_RATE = 0.00;
+const DESCUENTO = 0.00;
+
+const money = new Intl.NumberFormat(LOCALE, {
+  style: "currency",
+  currency: MONEDA
+});
+
+/* ===============================
+   PRODUCTOS (tus imágenes intactas)
+=============================== */
+const productos = [
+  { id:1, nombre:"Zapatos Altos Urban", precio:25, categoria:"Tacones",
+    img:"https://media.falabella.com/falabellaCO/135647109_061/w=800,h=800,fit=pad" },
+  { id:2, nombre:"Zapatos de Vestir Elegantes", precio:18, categoria:"Elegantes",
+    img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3Q7aBje34rEFnsLg5SqgzqwunYpB_9GAB2g&s" },
+  { id:3, nombre:"Rock N Heels", precio:30, categoria:"Tacones",
+    img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSu5grhPQRoY242uZtCSQR_Z6HHwZLnnbUurA&s" },
+  { id:4, nombre:"Mocasines Elegantes Negros", precio:18, categoria:"Elegantes",
+    img:"https://phantom-telva.uecdn.es/285dcba18b4e32022cbf1c92e522e4f5/crop/0x160/2047x1309/resize/828/f/jpg/assets/multimedia/imagenes/2022/01/12/16419821779451.jpg" },
+  { id:5, nombre:"Zapatos Altos-Baddie", precio:22, categoria:"Tacones",
+    img:"https://i.pinimg.com/236x/aa/ed/73/aaed730ea7bea94aa3fd6e908b4d8d38.jpg" }
+];
+
+/* ===============================
+   SELECTORES
+=============================== */
+const cont = document.getElementById("productos");
+const lista = document.getElementById("lista-carrito");
+const subtotalTxt = document.getElementById("subtotal-text");
+const descuentoTxt = document.getElementById("descuento-text");
+const impuestosTxt = document.getElementById("impuestos-text");
+const totalTxt = document.getElementById("total-text");
+const cantTxt = document.getElementById("cantidad-carrito");
+const selectCat = document.getElementById("categoria");
+const btnVaciar = document.getElementById("btn-vaciar");
+const btnFinal = document.getElementById("btn-finalizar");
+const paypalDiv = document.getElementById("paypal-button-container");
+
+let carrito = new Map();
+
+/* ===============================
+   RENDER PRODUCTOS
+=============================== */
+function renderProductos(listaProd){
+  cont.innerHTML = "";
+  listaProd.forEach(p=>{
+    const card = document.createElement("div");
+    card.className = "producto";
+    card.innerHTML = `
+      <img src="${p.img}" alt="${p.nombre}">
+      <h3>${p.nombre}</h3>
+      <p><strong>${money.format(p.precio)}</strong></p>
+      <button data-add="${p.id}">Agregar al carrito</button>
+    `;
+    cont.appendChild(card);
+  });
+}
+
+/* ===============================
+   FILTRO
+=============================== */
+function filtrar(){
+  const cat = selectCat.value;
+  const data = cat === "todos" ? productos : productos.filter(p=>p.categoria === cat);
+  renderProductos(data);
+  localStorage.setItem("filtro", cat);
+}
+
+/* ===============================
+   CARRITO
+=============================== */
+function guardar(){
+  localStorage.setItem("carrito", JSON.stringify([...carrito.entries()]));
+}
+
+function cargar(){
+  const data = localStorage.getItem("carrito");
+  if(data){
+    carrito = new Map(JSON.parse(data));
+  }
+}
+
+function totales(){
+  const subtotal = [...carrito.values()].reduce((acc,i)=> acc + i.precio * i.cantidad,0);
+  const desc = Math.min(DESCUENTO, subtotal);
+  const base = subtotal - desc;
+  const impuestos = base * TAX_RATE;
+  const total = base + impuestos;
+  const cantidad = [...carrito.values()].reduce((a,i)=> a + i.cantidad,0);
+  return {subtotal, desc, impuestos, total, cantidad};
+}
+
+function pintarCarrito(){
+  lista.innerHTML = "";
+  carrito.forEach(item=>{
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span>${item.nombre} — ${money.format(item.precio)}</span>
+      <div class="qty">
+        <button data-dec="${item.id}">−</button>
+        <span>${item.cantidad}</span>
+        <button data-inc="${item.id}">+</button>
+        <button class="remove" data-del="${item.id}">❌</button>
+      </div>
+    `;
+    lista.appendChild(li);
+  });
+
+  const t = totales();
+  subtotalTxt.textContent = money.format(t.subtotal);
+  descuentoTxt.textContent = money.format(t.desc);
+  impuestosTxt.textContent = money.format(t.impuestos);
+  totalTxt.textContent = money.format(t.total);
+  cantTxt.textContent = t.cantidad;
+
+  paypalDiv.style.display = t.total > 0 ? "block" : "none";
+  renderPayPal(t.total);
+}
+
+function add(id){
+  const p = productos.find(x=>x.id===id);
+  if(!p) return;
+
+  const item = carrito.get(id);
+  if(item){ item.cantidad++; }
+  else{ carrito.set(id, {...p, cantidad:1}); }
+
+  guardar();
+  pintarCarrito();
+}
+
+function dec(id){
+  const item = carrito.get(id);
+  if(!item) return;
+  item.cantidad--;
+  if(item.cantidad<=0) carrito.delete(id);
+  guardar(); pintarCarrito();
+}
+
+function delProd(id){
+  carrito.delete(id);
+  guardar(); pintarCarrito();
+}
+
+/* ===============================
+   PAYPAL
+=============================== */
+let renderedTotal = null;
+
+function renderPayPal(total){
+  if(total <= 0){
+    paypalDiv.innerHTML = "";
+    renderedTotal = null;
+    return;
+  }
+
+  if(renderedTotal === total) return;
+  renderedTotal = total;
+  paypalDiv.innerHTML = "";
+
+  paypal.Buttons({
+    createOrder: (data,actions)=> actions.order.create({
+      purchase_units:[{ amount:{ value: total.toFixed(2) } }]
+    }),
+    onApprove: (data,actions)=> actions.order.capture().then(det=>{
+      alert("¡Gracias! Pago aprobado.");
+      carrito.clear();
+      guardar();
+      pintarCarrito();
+    }),
+    onError: err=>{
+      console.error(err);
+      alert("Error con PayPal");
+    }
+  }).render("#paypal-button-container");
+}
+
+/* ===============================
+   EVENTOS
+=============================== */
+document.addEventListener("click", e=>{
+  if(e.target.dataset.add) add(+e.target.dataset.add);
+  if(e.target.dataset.inc) add(+e.target.dataset.inc);
+  if(e.target.dataset.dec) dec(+e.target.dataset.dec);
+  if(e.target.dataset.del) delProd(+e.target.dataset.del);
+});
+
+btnVaciar.addEventListener("click", ()=>{
+  if(confirm("¿Vaciar carrito?")){
+    carrito.clear();
+    guardar();
+    pintarCarrito();
+  }
+});
+
+btnFinal.addEventListener("click", ()=>{
+  if(carrito.size===0) return alert("Carrito vacío.");
+  alert("Compra completada (simulada).");
+  carrito.clear();
+  guardar();
+  pintarCarrito();
+});
+
+selectCat.addEventListener("change", filtrar);
+
+/* ===============================
+   INIT
+=============================== */
+(function init(){
+  cargar();
+  const cat = localStorage.getItem("filtro");
+  if(cat){ selectCat.value = cat; }
+
+  filtrar();
+  pintarCarrito();
+})();
+</script>
+
+</body>
+</html>
